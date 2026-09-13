@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MediGuide NG — Healthcare Guidance</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">MediGuide NG</div>
+    </header>
+
+    <main class="hero">
+
+        <div class="badge">🇳🇬 Built for better healthcare access</div>
+
+        <h1>
+            Healthcare guidance<br>
+            <span>when you need it.</span>
+        </h1>
+
+        <p>
+            Understand your symptoms, get clear health information,
+            and discover the right healthcare service for your needs.
+        </p>
+
+        <button id="getStartedBtn">
+            Get Started <span>→</span>
+        </button>
+
+
+        <!-- Symptom Section -->
+
+        <section class="symptom-section">
+
+            <h2>What are you experiencing?</h2>
+
+            <p>
+                Describe your symptoms in your own words.
+                MediGuide NG will provide general health guidance.
+            </p>
+
+            <textarea
+                id="symptomInput"
+                placeholder="Example: I have been feeling tired and have a headache..."
+                rows="5"
+            ></textarea>
+
+            <button id="analyzeBtn">
+                Get Guidance →
+            </button>
+
+            <div id="guidanceResult"></div>
+
+        </section>
+
+
+        <!-- Healthcare Services -->
+
+        <section class="services-section">
+
+            <div class="services-header">
+
+                <span class="section-label">
+                    Healthcare Services
+                </span>
+
+                <h2>
+                    Find the right care for you.
+                </h2>
+
+                <p>
+                    Explore healthcare services that may be appropriate
+                    for your needs.
+                </p>
+
+            </div>
+
+
+            <div class="service-grid">
+
+
+                <!-- Hospitals -->
+
+                <div class="service-card">
+
+                    <div class="service-icon">
+                        🏥
+                    </div>
+
+                    <h3>
+                        Hospitals & Clinics
+                    </h3>
+
+                    <p>
+                        Find facilities for medical consultations
+                        and care.
+                    </p>
+
+                    <div class="service-actions">
+
+                        <button
+                            class="service-btn"
+                            data-service="Hospitals & Clinics"
+                        >
+                            Find Care →
+                        </button>
+
+                        <button
+                            class="location-btn"
+                            data-service="Hospitals & Clinics"
+                            type="button"
+                        >
+                            📍 Use My Location
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Pharmacies -->
+
+                <div class="service-card">
+
+                    <div class="service-icon">
+                        💊
+                    </div>
+
+                    <h3>
+                        Pharmacies
+                    </h3>
+
+                    <p>
+                        Locate pharmacies where you can access
+                        healthcare products.
+                    </p>
+
+                    <div class="service-actions">
+
+                        <button
+                            class="service-btn"
+                            data-service="Pharmacies"
+                        >
+                            Find Pharmacies →
+                        </button>
+
+                        <button
+                            class="location-btn"
+                            data-service="Pharmacies"
+                            type="button"
+                        >
+                            📍 Use My Location
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Laboratories -->
+
+                <div class="service-card">
+
+                    <div class="service-icon">
+                        🧪
+                    </div>
+
+                    <h3>
+                        Laboratories
+                    </h3>
+
+                    <p>
+                        Find diagnostic and laboratory services
+                        near you.
+                    </p>
+
+                    <div class="service-actions">
+
+                        <button
+                            class="service-btn"
+                            data-service="Laboratories"
+                        >
+                            Find Labs →
+                        </button>
+
+                        <button
+                            class="location-btn"
+                            data-service="Laboratories"
+                            type="button"
+                        >
+                            📍 Use My Location
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Emergency -->
+
+                <div class="service-card">
+
+                    <div class="service-icon">
+                        🚨
+                    </div>
+
+                    <h3>
+                        Emergency Care
+                    </h3>
+
+                    <p>
+                        Get help finding appropriate emergency
+                        healthcare services.
+                    </p>
+
+                    <div class="service-actions">
+
+                        <button
+                            class="service-btn"
+                            data-service="Emergency Care"
+                        >
+                            Emergency Help →
+                        </button>
+
+                        <button
+                            class="location-btn"
+                            data-service="Emergency Care"
+                            type="button"
+                        >
+                            📍 Use My Location
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Features -->
+
+        <div class="features">
+
+            <div>
+                <strong>AI Guidance</strong>
+
+                <small>
+                    Clear, easy-to-understand information
+                </small>
+            </div>
+
+            <div>
+                <strong>Find Care</strong>
+
+                <small>
+                    Discover appropriate healthcare services
+                </small>
+            </div>
+
+            <div>
+                <strong>Safety First</strong>
+
+                <small>
+                    Designed to recognize urgent situations
+                </small>
+            </div>
+
+        </div>
+
+
+        <!-- Disclaimer -->
+
+        <p class="disclaimer">
+
+            MediGuide NG provides general health information and
+            healthcare navigation. It does not diagnose conditions
+            or replace a qualified healthcare professional.
+
+        </p>
+
+    </main>
+
+
+    <!-- Footer -->
+
+    <footer>
+
+        <div class="footer-content">
+
+            <div>
+
+                <strong>
+                    🚑 MediGuide NG
+                </strong>
+
+                <p>
+                    AI-powered healthcare navigation.
+                </p>
+
+            </div>
+
+
+            <div class="contact">
+
+                <span>
+                    Built by
+                    <strong>
+                        Wiz Humble Digitals 🔥
+                    </strong>
+                </span>
+
+                <a href="mailto:wisdomagbom9@gmail.com">
+                    wisdomagbom9@gmail.com
+                </a>
+
+                <a
+                    href="https://wisdom-agbom-portfolio.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    View portfolio →
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer-bottom">
+
+            <span>
+                © 2026 MediGuide NG
+            </span>
+
+            <span>
+                Built with purpose for better healthcare access.
+            </span>
+
+        </div>
+
+    </footer>
+
+
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>
