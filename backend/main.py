@@ -372,7 +372,7 @@ async def healthcare_search(
         # =================================
 
         overpass_url = (
-            "https://overpass-api.de/api/interpreter"
+            "https://overpass.private.coffee/api/interpreter"
         )
 
         query = f"""
