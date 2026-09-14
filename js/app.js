@@ -1,5 +1,3 @@
-alert("MediGuide JavaScript loaded!");
-
 const getStartedButton = document.querySelector("#getStartedBtn");
 const analyzeButton = document.querySelector("#analyzeBtn");
 const symptomInput = document.querySelector("#symptomInput");
@@ -46,7 +44,7 @@ analyzeButton.addEventListener("click", async () => {
     try {
 
         const response = await fetch(
-            "/api/guidance",
+            "http://127.0.0.1:8000/api/guidance",
             {
                 method: "POST",
 
@@ -714,7 +712,7 @@ async function performHealthcareSearch(
 
         const response =
             await fetch(
-                "/api/healthcare-search",
+                "http://127.0.0.1:8000/api/healthcare-search",
                 {
                     method: "POST",
 
@@ -1558,7 +1556,7 @@ async function performEmergencySearch(
 
         const response =
             await fetch(
-                "/api/healthcare-search",
+                "http://127.0.0.1:8000/api/healthcare-search",
                 {
                     method: "POST",
 

@@ -1,5 +1,3 @@
-alert("MediGuide JavaScript loaded!");
-
 const getStartedButton = document.querySelector("#getStartedBtn");
 const analyzeButton = document.querySelector("#analyzeBtn");
 const symptomInput = document.querySelector("#symptomInput");
