@@ -1,30 +1,41 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from google import genai
+
 import os
 import json
 import requests
 import math
 
-load_dotenv()
+
+# ==========================================
+# ENVIRONMENT
+# ==========================================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
+
+load_dotenv(
+    os.path.join(BASE_DIR, ".env")
+)
 
 
-# =================================
-# Gemini AI
-# =================================
+# ==========================================
+# GEMINI CLIENT
+# ==========================================
 
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
 
-# =================================
-# FastAPI App
-# =================================
+# ==========================================
+# FASTAPI APP
+# ==========================================
 
 app = FastAPI(
     title="MediGuide NG",
@@ -33,53 +44,61 @@ app = FastAPI(
 )
 
 
+# ==========================================
+# FRONTEND
+# ==========================================
+
 @app.get("/")
 async def serve_frontend():
-    return FileResponse("index.html")
+    return FileResponse(
+        os.path.join(PROJECT_DIR, "index.html")
+    )
+
+
 @app.get("/favicon.ico")
 async def favicon():
-    return FileResponse("favicon.ico")
+    return FileResponse(
+        os.path.join(PROJECT_DIR, "favicon.ico")
+    )
 
 
-# =================================
+app.mount(
+    "/css",
+    StaticFiles(
+        directory=os.path.join(PROJECT_DIR, "css")
+    ),
+    name="css"
+)
+
+app.mount(
+    "/js",
+    StaticFiles(
+        directory=os.path.join(PROJECT_DIR, "js")
+    ),
+    name="js"
+)
+
+
+# ==========================================
 # CORS
-# =================================
-
-
-app.mount("/css", StaticFiles(directory="css"), name="css")
-app.mount("/js", StaticFiles(directory="js"), name="js")
-
+# ==========================================
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:5500",
-        "http://localhost:5500"
+        "http://localhost:5500",
+        "https://mediguide-ng.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 
-# =================================
-# Request Models
-# =================================
-
-class SymptomRequest(BaseModel):
-    symptoms: str
-
-
-class HealthcareSearchRequest(BaseModel):
-    location: str = ""
-    service: str
-    latitude: float | None = None
-    longitude: float | None = None
-
-
-# =================================
-# Health Check
-# =================================
+# ==========================================
+# HEALTH CHECK
+# ==========================================
 
 @app.get("/health")
 async def health_check():
@@ -90,9 +109,29 @@ async def health_check():
     }
 
 
-# =================================
+# ==========================================
+# REQUEST MODELS
+# ==========================================
+
+class SymptomRequest(BaseModel):
+
+    symptoms: str
+
+
+class HealthcareSearchRequest(BaseModel):
+
+    location: str = ""
+
+    service: str
+
+    latitude: float | None = None
+
+    longitude: float | None = None
+
+
+# ==========================================
 # AI HEALTH GUIDANCE
-# =================================
+# ==========================================
 
 @app.post("/api/guidance")
 async def get_guidance(
@@ -105,7 +144,7 @@ async def get_guidance(
 
         return {
             "success": False,
-            "message": "Please describe what you are experiencing."
+            "message": "Please enter your symptoms."
         }
 
     try:
@@ -115,96 +154,93 @@ async def get_guidance(
             model="gemini-3.6-flash",
 
             contents=f"""
-You are MediGuide NG, a healthcare navigation assistant.
+You are MediGuide NG, a healthcare guidance assistant.
 
-The user described:
+The user has described these symptoms:
 
 {symptoms}
 
 Provide general health information only.
-Do NOT diagnose the user.
 
-Choose exactly ONE urgency level:
+IMPORTANT:
+- Do NOT diagnose the user.
+- Do NOT claim certainty about a medical condition.
+- Encourage professional medical care when appropriate.
+- Clearly identify emergency situations.
+- Keep the response practical and easy to understand.
 
-- Emergency
-- Urgent
-- Routine
-
-Emergency means symptoms may require immediate medical attention.
-
-Urgent means the person should seek medical attention soon.
-
-Routine means there are no obvious emergency warning signs
-from the information provided.
-
-Return ONLY valid JSON in this exact structure:
+Return ONLY valid JSON using exactly this structure:
 
 {{
-    "urgency": "Emergency",
-    "guidance": "Your general health guidance here.",
-    "warning": "When the person should seek urgent medical attention."
+    "urgency": "Emergency" or "Urgent" or "Routine",
+    "guidance": "General health guidance",
+    "warning": "When the person should seek medical attention"
 }}
-
-Safety rules:
-
-- Never diagnose a disease.
-- Never claim certainty.
-- Do not prescribe medication.
-- Do not give dangerous treatment instructions.
-- If emergency warning signs are present, clearly say to seek
-  immediate medical attention.
-- Keep the language simple and easy to understand.
 """
         )
 
         raw_text = response.text.strip()
 
-        if raw_text.startswith("```"):
+        if raw_text.startswith("```json"):
 
-            raw_text = (
-                raw_text
-                .replace("```json", "")
-                .replace("```", "")
-                .strip()
-            )
+            raw_text = raw_text[
+                7:
+            ]
 
-        result = json.loads(raw_text)
+        if raw_text.endswith("```"):
+
+            raw_text = raw_text[
+                :-3
+            ]
+
+        raw_text = raw_text.strip()
+
+        result = json.loads(
+            raw_text
+        )
 
         return {
+
             "success": True,
+
             "urgency": result.get(
                 "urgency",
                 "Routine"
             ),
+
             "message": result.get(
                 "guidance",
-                ""
+                "Please consult a healthcare professional for appropriate advice."
             ),
+
             "warning": result.get(
                 "warning",
-                ""
+                "Seek medical attention if symptoms worsen or become concerning."
             )
         }
 
-    except Exception as error:
+    except Exception as e:
 
         print(
-            "Gemini error:",
-            error
+            "AI guidance error:",
+            str(e)
         )
 
         return {
+
             "success": False,
+
             "message": (
-                "Sorry, MediGuide NG could not process "
-                "your request right now. Please try again."
+                "The healthcare guidance service "
+                "is temporarily unavailable. "
+                "Please try again."
             )
         }
 
 
-# =================================
+# ==========================================
 # DISTANCE CALCULATION
-# =================================
+# ==========================================
 
 def calculate_distance(
     lat1,
@@ -213,10 +249,15 @@ def calculate_distance(
     lon2
 ):
 
-    earth_radius_km = 6371.0
+    earth_radius = 6371
 
-    lat1_rad = math.radians(lat1)
-    lat2_rad = math.radians(lat2)
+    lat1_rad = math.radians(
+        lat1
+    )
+
+    lat2_rad = math.radians(
+        lat2
+    )
 
     delta_lat = math.radians(
         lat2 - lat1
@@ -236,17 +277,21 @@ def calculate_distance(
         math.sin(delta_lon / 2) ** 2
     )
 
-    c = 2 * math.atan2(
-        math.sqrt(a),
-        math.sqrt(1 - a)
+    c = (
+        2
+        *
+        math.atan2(
+            math.sqrt(a),
+            math.sqrt(1 - a)
+        )
     )
 
-    return earth_radius_km * c
+    return earth_radius * c
 
 
-# =================================
-# HEALTHCARE FACILITY SEARCH
-# =================================
+# ==========================================
+# HEALTHCARE SEARCH
+# ==========================================
 
 @app.post("/api/healthcare-search")
 async def healthcare_search(
@@ -254,17 +299,14 @@ async def healthcare_search(
 ):
 
     location = request.location.strip()
-    service = request.service.strip().lower()
 
-    # =================================
-    # Determine Search Coordinates
-    # =================================
+    service = request.service.lower().strip()
 
     try:
 
-        # ---------------------------------
-        # GPS SEARCH
-        # ---------------------------------
+        # ==================================
+        # DETERMINE SEARCH LOCATION
+        # ==================================
 
         if (
             request.latitude is not None
@@ -281,40 +323,52 @@ async def healthcare_search(
 
             search_source = "gps"
 
-        # ---------------------------------
-        # MANUAL LOCATION SEARCH
-        # ---------------------------------
-
         else:
 
             if not location:
 
                 return {
+
                     "success": False,
+
                     "message": (
                         "Please enter a city or area."
                     )
                 }
+
+            # ==================================
+            # NOMINATIM LOCATION GEOCODING
+            # ==================================
 
             geocode_url = (
                 "https://nominatim.openstreetmap.org/search"
             )
 
             geocode_params = {
+
                 "q": f"{location}, Nigeria",
+
                 "format": "json",
+
                 "limit": 1
+
             }
 
             headers = {
-                "User-Agent": "MediGuide-NG/1.0"
+
+                "User-Agent":
+                    "MediGuide-NG/1.0"
             }
 
             geocode_response = requests.get(
+
                 geocode_url,
+
                 params=geocode_params,
+
                 headers=headers,
-                timeout=10
+
+                timeout=15
             )
 
             geocode_response.raise_for_status()
@@ -326,10 +380,12 @@ async def healthcare_search(
             if not geocode_data:
 
                 return {
+
                     "success": False,
+
                     "message": (
-                        f"We could not find the location "
-                        f"'{location}'."
+                        f"We could not find the "
+                        f"location '{location}'."
                     )
                 }
 
@@ -343,182 +399,242 @@ async def healthcare_search(
 
             search_source = "manual"
 
-        # =================================
-        # Determine Healthcare Category
-        # =================================
+        # ==================================
+        # DETERMINE HEALTHCARE TYPE
+        # ==================================
 
         if "pharmacy" in service:
 
-            category = "amenity=pharmacy"
-
-        elif "lab" in service:
-
-            category = "healthcare=laboratory"
+            search_query = "pharmacy"
 
         elif (
-            "hospital" in service
+            "lab" in service
+            or "laboratory" in service
+        ):
+
+            search_query = (
+                "medical laboratory"
+            )
+
+        elif (
+            "emergency" in service
+            or "hospital" in service
             or "clinic" in service
             or "care" in service
         ):
 
-            category = "amenity=hospital"
+            search_query = "hospital"
 
         else:
 
-            category = "amenity=hospital"
+            search_query = "hospital"
 
-        # =================================
-        # OpenStreetMap / Overpass
-        # =================================
+        # ==================================
+        # NOMINATIM HEALTHCARE SEARCH
+        # ==================================
 
-        overpass_url = (
-            "https://overpass.private.coffee/api/interpreter"
+        nominatim_url = (
+            "https://nominatim.openstreetmap.org/search"
         )
 
-        query = f"""
-        [out:json][timeout:20];
+        # Approximately 10km around location.
+        # 0.10 degrees is roughly 11km.
+        lat_offset = 0.10
+        lon_offset = 0.10
 
-        (
-            node[{category}](
-                around:10000,
-                {search_latitude},
-                {search_longitude}
-            );
+        west = (
+            search_longitude
+            - lon_offset
+        )
 
-            way[{category}](
-                around:10000,
-                {search_latitude},
-                {search_longitude}
-            );
-        );
+        north = (
+            search_latitude
+            + lat_offset
+        )
 
-        out center tags;
-        """
+        east = (
+            search_longitude
+            + lon_offset
+        )
 
-        headers = {
-            "User-Agent": "MediGuide-NG/1.0"
+        south = (
+            search_latitude
+            - lat_offset
+        )
+
+        viewbox = (
+            f"{west},{north},{east},{south}"
+        )
+
+        search_params = {
+
+            "q": search_query,
+
+            "format": "json",
+
+            "limit": 50,
+
+            "viewbox": viewbox,
+
+            "bounded": 1,
+
+            "addressdetails": 1,
+
+            "extratags": 1
         }
 
-        overpass_response = requests.post(
-            overpass_url,
-            data=query,
+        headers = {
+
+            "User-Agent":
+                "MediGuide-NG/1.0"
+        }
+
+        search_response = requests.get(
+
+            nominatim_url,
+
+            params=search_params,
+
             headers=headers,
-            timeout=30
+
+            timeout=20
         )
 
-        overpass_response.raise_for_status()
+        search_response.raise_for_status()
 
-        data = overpass_response.json()
+        data = search_response.json()
 
-        # =================================
-        # Format Facilities
-        # =================================
+        # ==================================
+        # FORMAT FACILITIES
+        # ==================================
 
         facilities = []
 
-        for element in data.get(
-            "elements",
-            []
-        ):
+        for element in data:
 
-            tags = element.get(
-                "tags",
+            name = element.get(
+                "name"
+            )
+
+            if not name:
+
+                name = "Healthcare Facility"
+
+            latitude = element.get(
+                "lat"
+            )
+
+            longitude = element.get(
+                "lon"
+            )
+
+            if (
+                latitude is None
+                or longitude is None
+            ):
+
+                continue
+
+            facility_latitude = float(
+                latitude
+            )
+
+            facility_longitude = float(
+                longitude
+            )
+
+            # ==================================
+            # DISTANCE
+            # ==================================
+
+            distance_km = calculate_distance(
+
+                search_latitude,
+
+                search_longitude,
+
+                facility_latitude,
+
+                facility_longitude
+            )
+
+            # Keep facilities within 10km
+            if distance_km > 10:
+
+                continue
+
+            # ==================================
+            # ADDRESS
+            # ==================================
+
+            address = element.get(
+                "display_name",
+                ""
+            )
+
+            address_data = element.get(
+                "address",
                 {}
             )
 
-            name = tags.get(
-                "name",
-                "Healthcare Facility"
-            )
+            if address_data:
 
-            # ---------------------------------
-            # Facility Coordinates
-            # ---------------------------------
+                readable_parts = []
 
-            if element.get("type") == "node":
+                for key in [
 
-                facility_latitude = element.get(
-                    "lat"
-                )
+                    "house_number",
 
-                facility_longitude = element.get(
-                    "lon"
-                )
+                    "road",
 
-            else:
+                    "suburb",
 
-                center = element.get(
-                    "center",
-                    {}
-                )
+                    "city",
 
-                facility_latitude = center.get(
-                    "lat"
-                )
+                    "state"
 
-                facility_longitude = center.get(
-                    "lon"
-                )
+                ]:
 
-            # ---------------------------------
-            # Address
-            # ---------------------------------
-
-            address_parts = []
-
-            for key in [
-                "addr:housenumber",
-                "addr:street",
-                "addr:city"
-            ]:
-
-                if tags.get(key):
-
-                    address_parts.append(
-                        tags[key]
+                    value = address_data.get(
+                        key
                     )
 
-            address = ", ".join(
-                address_parts
+                    if value:
+
+                        readable_parts.append(
+                            value
+                        )
+
+                if readable_parts:
+
+                    address = ", ".join(
+                        readable_parts
+                    )
+
+            # ==================================
+            # CONTACT INFORMATION
+            # ==================================
+
+            extra_tags = element.get(
+                "extratags",
+                {}
             )
 
-            # ---------------------------------
-            # Contact
-            # ---------------------------------
-
-            phone = tags.get(
+            phone = extra_tags.get(
                 "phone",
-                tags.get(
+                extra_tags.get(
                     "contact:phone",
                     ""
                 )
             )
 
-            website = tags.get(
+            website = extra_tags.get(
                 "website",
-                tags.get(
+                extra_tags.get(
                     "contact:website",
                     ""
                 )
             )
-
-            # =================================
-            # TRUE GPS DISTANCE
-            # =================================
-
-            distance_km = None
-
-            if (
-                facility_latitude is not None
-                and facility_longitude is not None
-            ):
-
-                distance_km = calculate_distance(
-                    search_latitude,
-                    search_longitude,
-                    float(facility_latitude),
-                    float(facility_longitude)
-                )
 
             facilities.append({
 
@@ -530,61 +646,114 @@ async def healthcare_search(
 
                 "website": website,
 
-                "latitude": facility_latitude,
+                "latitude":
+                    facility_latitude,
 
-                "longitude": facility_longitude,
+                "longitude":
+                    facility_longitude,
 
-                "distance_km": distance_km
-
+                "distance_km":
+                    round(
+                        distance_km,
+                        2
+                    )
             })
 
-        # =================================
-        # Sort Nearest First
-        # =================================
+        # ==================================
+        # SORT BY DISTANCE
+        # ==================================
 
         facilities.sort(
-            key=lambda facility:
-                facility["distance_km"]
-                if facility["distance_km"]
+            key=lambda item:
+                item["distance_km"]
+                if item["distance_km"]
                 is not None
-                else float("inf")
+                else 999999
         )
 
-        # =================================
-        # Limit Results
-        # =================================
-
+        # Return maximum 20
         facilities = facilities[:20]
+
+        # ==================================
+        # NO RESULTS
+        # ==================================
+
+        if not facilities:
+
+            return {
+
+                "success": True,
+
+                "source": search_source,
+
+                "count": 0,
+
+                "facilities": [],
+
+                "message": (
+                    f"No {search_query} facilities "
+                    f"were found within approximately "
+                    f"10km of the selected location."
+                )
+            }
+
+        # ==================================
+        # SUCCESS
+        # ==================================
 
         return {
 
             "success": True,
 
-            "location": (
-                location
-                if location
-                else "Your current location"
+            "source": search_source,
+
+            "count": len(
+                facilities
             ),
 
-            "service": service,
-
-            "search_source": search_source,
-
-            "latitude": search_latitude,
-
-            "longitude": search_longitude,
-
-            "count": len(facilities),
-
             "facilities": facilities
-
         }
 
-    except requests.exceptions.RequestException as error:
+    except requests.exceptions.Timeout:
+
+        print(
+            "Healthcare search timed out."
+        )
+
+        return {
+
+            "success": False,
+
+            "message": (
+                "The healthcare search took "
+                "too long to respond. "
+                "Please try again."
+            )
+        }
+
+    except requests.exceptions.RequestException as e:
+
+        print(
+            "Healthcare search network error:",
+            str(e)
+        )
+
+        return {
+
+            "success": False,
+
+            "message": (
+                "The healthcare search service "
+                "is temporarily unavailable. "
+                "Please try again."
+            )
+        }
+
+    except Exception as e:
 
         print(
             "Healthcare search error:",
-            error
+            str(e)
         )
 
         return {
@@ -592,26 +761,9 @@ async def healthcare_search(
             "success": False,
 
             "message": (
-                "The healthcare directory is temporarily "
-                "unavailable. Please try again."
+                "We could not complete the "
+                "healthcare search. "
+                "Please try again."
             )
-
         }
 
-    except Exception as error:
-
-        print(
-            "Unexpected healthcare search error:",
-            error
-        )
-
-        return {
-
-            "success": False,
-
-            "message": (
-                "Something went wrong while searching "
-                "for healthcare facilities."
-            )
-
-        }
