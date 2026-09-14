@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -31,9 +33,22 @@ app = FastAPI(
 )
 
 
+@app.get("/")
+async def serve_frontend():
+    return FileResponse("index.html")
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("favicon.ico")
+
+
 # =================================
 # CORS
 # =================================
+
+
+app.mount("/css", StaticFiles(directory="css"), name="css")
+app.mount("/js", StaticFiles(directory="js"), name="js")
+
 
 app.add_middleware(
     CORSMiddleware,
